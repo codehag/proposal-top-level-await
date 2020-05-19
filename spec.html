@@ -23,22 +23,6 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
     1. Let _runningContext_ be the running execution context.
     1. Let _asyncContext_ be a copy of _runningContext_.
     1. <ins>Perform ! AsyncBlockStart(_promiseCapability_, _asyncFunctionBody_, _asyncContext_).</ins>
-    1. <del>Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context the following steps will be performed:</del>
-      1. <del>Let _result_ be the result of evaluating _asyncFunctionBody_.</del>
-      1. <del>Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.</del>
-      1. <del>Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.</del>
-      1. <del>If _result_.[[Type]] is ~normal~, then</del>
-        1. <del>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo;*undefined*&raquo;).</del>
-      1. <del>Else if _result_.[[Type]] is ~return~, then</del>
-        1. <del>Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo;_result_.[[Value]]&raquo;).</del>
-      1. <del>Else,</del>
-        1. <del>Assert: _result_.[[Type]] is ~throw~.</del>
-        1. <del>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo;_result_.[[Value]]&raquo;).</del>
-      1. <del>Return.</del>
-    1. <del>Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.</del>
-    1. <del>Resume the suspended evaluation of _asyncContext_. Let _result_ be the value returned by the resumed computation.</del>
-    1. <del>Assert: When we return here, _asyncContext_ has already been removed from the execution context stack and _runningContext_ is the currently running execution context.</del>
-    1. <del>Assert: _result_ is a normal completion with a value of *undefined*. The possible sources of completion values are Await or, if the async function doesn't await anything, the step 3.g above.</del>
     1. Return.
   </emu-alg>
 </emu-clause>
@@ -46,10 +30,10 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
 <emu-clause id="sec-asyncblockstart" aoid="AsyncBlockStart">
   <h1><ins>AsyncBlockStart ( _promiseCapability_, _asyncBody_, _asyncContext_ )</ins></h1>
   <emu-alg>
-    1. Assert: _promiseCapability_ is a PromiseCapability Record.
-    1. Let _runningContext_ be the running execution context.
+    1. <ins>Assert: _promiseCapability_ is a PromiseCapability Record.</ins>
+    1. <ins>Let _runningContext_ be the running execution context.</ins>
     1. Set the code evaluation state of _asyncContext_ such that when evaluation is resumed for that execution context the following steps will be performed:
-      1. Let _result_ be the result of evaluating _asyncBody_.
+      1. Let _result_ be the result of evaluating <del>_asyncFunctionBody_</del><ins>_asyncBody_</ins>.
       1. Assert: If we return here, the async function either threw an exception or performed an implicit or explicit return; all awaiting is done.
       1. Remove _asyncContext_ from the execution context stack and restore the execution context that is at the top of the execution context stack as the running execution context.
       1. If _result_.[[Type]] is ~normal~, then
@@ -63,7 +47,7 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
     1. Push _asyncContext_ onto the execution context stack; _asyncContext_ is now the running execution context.
     1. Resume the suspended evaluation of _asyncContext_. Let _result_ be the value returned by the resumed computation.
     1. Assert: When we return here, _asyncContext_ has already been removed from the execution context stack and _runningContext_ is the currently running execution context.
-    1. Assert: _result_ is a normal completion with a value of *undefined*. The possible sources of completion values are Await or, if the async function doesn't await anything, the step 2.g above.
+    1. Assert: _result_ is a normal completion with a value of *undefined*. The possible sources of completion values are Await or, if the async function doesn't await anything, the step <del>3.g</del><ins>2.g</ins> above.
   </emu-alg>
 </emu-clause>
 
@@ -101,10 +85,12 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
           [[Environment]]
         </td>
         <td>
-          Lexical Environment | *undefined*
+          <del>module Environment Record(<emu-xref href="#sec-module-environment-records"></emu-xref>)</del><ins>Lexical Environment</ins> | *undefined*
         </td>
         <td>
-          The Lexical Environment containing the top level bindings for this module. This field is set when the module is linked.
+          <del>The Environment Record containing the top level bindings for this module. This field is set when the module is linked. </del>
+          <ins>The Lexical Environment containing the top level bindings for this module. This field is
+          set when the module is linked.</ins>
         </td>
       </tr>
       <tr>
@@ -157,8 +143,11 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
           ResolveExport(_exportName_, _resolveSet_)
         </td>
         <td>
-          <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String }. Return *null* if the name cannot be resolved, or `"ambiguous"` if multiple bindings were found.</p>
+          <p>Return the binding of a name exported by this module. Bindings are represented by a <dfn id="resolvedbinding-record">ResolvedBinding Record</dfn>, of the form { [[Module]]: Module Record, [[BindingName]]: String }. <del>If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to "*namespace*".</del> Return null if the name cannot be resolved, or "ambiguous" if multiple bindings were found.</p>
+          <del>Each time this operation is called with a specific exportName, resolveSet pair as arguments it must return the same result if it completes normally.</del>
+          <ins>
           <p>This operation must be idempotent if it completes normally. Each time it is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result.</p>
+          </ins>
         </td>
       </tr>
       <tr>
@@ -186,7 +175,16 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
 <emu-clause id="sec-cyclic-module-records">
   <h1>Cyclic Module Records</h1>
 
+  <del>The abstract operation InnerModuleLinking takes arguments module (a Cyclic Module Record),
+    stack, and index. It is used by Link to perform the actual linking process for module, as well
+    as recursively on all other modules in the dependency graph. The stack and index parameters, as
+    well as a module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, keep track of the depth-first
+    search (DFS) traversal. In particular, [[DFSAncestorIndex]] is used to discover strongly
+    connected components (SCCs), such that all modules in an SCC transition to linked together. It
+    performs the following steps when called:</del>
+  <ins>
   <p>A <dfn id="cyclic-module-record">Cyclic Module Record</dfn> is used to represent information about a module that can participate in dependency cycles with other modules that are subclasses of the Cyclic Module Record type. Module Records that are not subclasses of the Cyclic Module Record type must not participate in dependency cycles with Source Text Module Records.</p>
+  </ins>
 
   <emu-table id="table-cyclic-module-fields" caption="Additional Fields of Cyclic Module Records">
     <table>
@@ -441,6 +439,9 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
     <p>This abstract method performs the following steps (most of the work is done by the auxiliary function InnerModuleEvaluation):</p>
 
     <emu-alg>
+
+      1. <del>Assert: This call to Evaluate is not happening at the same time as another call to
+        Evaluate within the surrounding agent.</del>
       1. Let _module_ be this Cyclic Module Record.
       1. Assert: _module_.[[Status]] is `"linked"` or `"evaluated"`.
       1. <ins>If _module_.[[Status]] is `"evaluated"`, set _module_ to GetAsyncCycleRoot(_module_).</ins>
@@ -469,9 +470,17 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
     <emu-clause id="sec-innermoduleevaluation" aoid="InnerModuleEvaluation">
       <h1>InnerModuleEvaluation( _module_, _stack_, _index_ )</h1>
 
+      <del>The abstract operation InnerModuleEvaluation takes arguments module (a Source Text Module
+        Record), stack, and index. It is used by Evaluate to perform the actual evaluation process
+        for module, as well as recursively on all other modules in the dependency graph. The stack
+        and index parameters, as well as module's [[DFSIndex]] and [[DFSAncestorIndex]] fields, are
+        used the same way as in InnerModuleLinking. It performs the following steps when
+        called:</del>
+      <ins>
       <p>The InnerModuleEvaluation abstract operation is used by Evaluate to perform the actual evaluation process for the Cyclic Module Record _module_, as well as recursively on all other modules in the dependency graph. The _stack_ and _index_ parameters, as well as _module_'s [[DFSIndex]] and [[DFSAncestoreIndex]] fields, are used the same way as in InnerModuleLinking.</p>
 
       <p>This abstract operation performs the following steps:</p>
+      </ins>
 
       <emu-alg>
         1. If _module_ is not a Cyclic Module Record, then
@@ -531,7 +540,7 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
 
     <emu-clause id="sec-execute-async-module" aoid="ExecuteAsyncModule">
       <h1><ins>ExecuteAsyncModule ( _module_ )</ins></h1>
-      <emu-alg>
+      <emu-alg><ins>
         1. Assert: _module_.[[Status]] is `"evaluating"` or `"evaluated"`.
         1. Assert: _module_.[[Async]] is *true*.
         1. Set _module_.[[AsyncEvaluating]] to *true*.
@@ -545,28 +554,38 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
         1. Perform ! PerformPromiseThen(_capability_.[[Promise]], _onFulfilled_, _onRejected_).
         1. Perform ! _module_.ExecuteModule(_capability_).
         1. Return.
+        </ins>
       </emu-alg>
 
+      <ins>
       <p>A CallAsyncModuleFulfilled function is an anonymous built-in function with a [[Module]] internal slot. When a CallAsyncModuleFulfilled function is called that expects no arguments it performs the following steps:</p>
+      </ins>
       <emu-alg>
+        <ins>
         1. Let _f_ be the active function object.
         1. Let _module_ be _f_.[[Module]].
         1. Perform ! AsyncModuleExecutionFulfilled(_module_).
         1. Return.
+        </ins>
       </emu-alg>
 
+      <ins>
       <p>A CallAsyncModuleRejected function is an anonymous built-in function with a [[Module]] internal slot. When a CallAsyncModuleRejected function is called with argument _error_ it performs the following steps:</p>
+      </ins>
       <emu-alg>
+        <ins>
         1. Let _f_ be the active function object.
         1. Let _module_ be _f_.[[Module]].
         1. Perform ! AsyncModuleExecutionRejected(_module_, _error_).
         1. Return.
+        </ins>
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-getasynccycleroot" aoid="GetAsyncCycleRoot">
       <h1><ins>GetAsyncCycleRoot ( _module_ )</ins></h1>
       <emu-alg>
+        <ins>
         1. Assert: _module_.[[Status]] is `"evaluated"`.
         1. If _module_.[[AsyncParentModules]] is an empty List, return _module_.
         1. Repeat, while _module_.[[DFSIndex]] is greater than _module_.[[DFSAncestorIndex]],
@@ -576,11 +595,13 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
           1. Set _module_ to _nextCycleModule_.
         1. Assert: _module_.[[DFSIndex]] is equal to _module_.[[DFSAncestorIndex]].
         1. Return _module_.
+        </ins>
       </emu-alg>
     </emu-clause>
 
     <emu-clause id="sec-asyncmodulexecutionfulfilled" aoid="AsyncModuleExecutionFulfilled">
       <h1><ins>AsyncModuleExecutionFulfilled ( _module_ )</ins></h1>
+      <ins>
       <emu-alg>
         1. Assert: _module_.[[Status]] is `"evaluated"`.
         1. If _module_.[[AsyncEvaluating]] is *false*,
@@ -609,10 +630,12 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
           1. Perform ! Call(_module_.[[TopLevelCapability]].[[Resolve]], *undefined*, &laquo;*undefined*&raquo;).
         1. Return *undefined*.
       </emu-alg>
+      </ins>
     </emu-clause>
 
     <emu-clause id="sec-AsyncModuleExecutionRejected" aoid="AsyncModuleExecutionRejected">
       <h1><ins>AsyncModuleExecutionRejected ( _module_, _error_ )</ins></h1>
+      <ins>
       <emu-alg>
         1. Assert: _module_.[[Status]] is `"evaluated"`.
         1. If _module_.[[AsyncEvaluating]] is *false*,
@@ -630,6 +653,7 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
           1. Perform ! Call(_module_.[[TopLevelCapability]].[[Reject]], *undefined*, &laquo;_error_&raquo;).
         1. Return *undefined*.
       </emu-alg>
+      </ins>
     </emu-clause>
   </emu-clause>
 </emu-clause>
@@ -639,10 +663,15 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
 
   <emu-clause id="sec-parsemodule" aoid="ParseModule">
     <h1>ParseModule ( _sourceText_, _realm_, _hostDefined_ )</h1>
+    <del>
+      The abstract operation ParseModule takes arguments sourceText (ECMAScript source text), realm, and hostDefined. It creates a Source Text Module Record based upon the result of parsing sourceText as a Module. It performs the following steps when called:
+    </del>
+    <ins>
     <p>The abstract operation ParseModule with arguments _sourceText_, _realm_, and _hostDefined_ creates a Source Text Module Record based upon the result of parsing _sourceText_ as a |Module|. ParseModule performs the following steps:</p>
+    </ins>
     <emu-alg>
       1. Assert: _sourceText_ is an ECMAScript source text (see clause <emu-xref href="#sec-ecmascript-language-source-code"></emu-xref>).
-      1. Parse _sourceText_ using |Module| as the goal symbol and analyse the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let _body_ be the resulting parse tree. Otherwise, let _body_ be a List of one or more *SyntaxError* or *ReferenceError* objects representing the parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation-dependent manner. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation-dependent, but at least one must be present.
+      1. Parse _sourceText_ using |Module| as the goal symbol and analyse the parse result for any Early Error conditions. If the parse was successful and no early errors were found, let _body_ be the resulting parse tree. Otherwise, let _body_ be a List of one or more *SyntaxError* <ins>or *ReferenceError*</ins> objects representing the parsing errors and/or early errors. Parsing and early error detection may be interweaved in an implementation-dependent manner. If more than one parsing error or early error is present, the number and ordering of error objects in the list is implementation-dependent, but at least one must be present.
       1. If _body_ is a List of errors, return _body_.
       1. Let _requestedModules_ be the ModuleRequests of _body_.
       1. Let _importEntries_ be ImportEntries of _body_.
@@ -658,9 +687,10 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
           1. Else,
             1. Let _ie_ be the element of _importEntries_ whose [[LocalName]] is the same as _ee_.[[LocalName]].
             1. If _ie_.[[ImportName]] is `"*"`, then
-              1. Assert: This is a re-export of an imported module namespace object.
+            1. <del>NOTE</del><ins>Assert<ins>: This is a re-export of an imported module namespace object.
               1. Append _ee_ to _localExportEntries_.
             1. Else this is a re-export of a single name,
+              1. <del>NOTE: This is a re-export of a single name.</del>
               1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
         1. Else if _ee_.[[ImportName]] is `"*"`, then
           1. Append _ee_ to _starExportEntries_.
@@ -676,7 +706,7 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
 
 
     <emu-clause id="sec-source-text-module-record-execute-module" aoid="ExecuteModule">
-      <h1>ExecuteModule ( <ins>[ _capability_ ]</ins> )</h1>
+      <h1>ExecuteModule ( <ins>[ _capability_ ]</ins> ) <del>Concrete Method</del></h1>
 
       <p>The ExecuteModule concrete method of a Source Text Module Record implements the corresponding Cyclic Module Record abstract method.</p>
 
@@ -684,22 +714,28 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
 
       <emu-alg>
         1. Let _module_ be this Source Text Module Record.
-        1. Let _moduleCxt_ be a new ECMAScript code execution context.
-        1. Set the Function of _moduleCxt_ to *null*.
-        1. Assert: _module_.[[Realm]] is not *undefined*.
-        1. Set the Realm of _moduleCxt_ to _module_.[[Realm]].
-        1. Set the ScriptOrModule of _moduleCxt_ to _module_.
-        1. Assert: _module_ has been linked and declarations in its module environment have been linked.
-        1. Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].
-        1. Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].
+        1. <ins>Let _moduleCxt_ be a new ECMAScript code execution context.</ins>
+        1. <ins>Set the Function of _moduleCxt_ to *null*.</ins>
+        1. <ins>Assert: _module_.[[Realm]] is not *undefined*.</ins>
+        1. <ins>Set the Realm of _moduleCxt_ to _module_.[[Realm]].</ins>
+        1. <ins>Set the ScriptOrModule of _moduleCxt_ to _module_.</ins>
+        1. <ins>Assert: _module_ has been linked and declarations in its module environment have been linked.</ins>
+        1. <ins>Set the VariableEnvironment of _moduleCxt_ to _module_.[[Environment]].</ins>
+        1. <ins>Set the LexicalEnvironment of _moduleCxt_ to _module_.[[Environment]].</ins>
         1. Suspend the currently running execution context.
+        1. <del>Let moduleContext be module.[[Context]].</del>
+        1. <del>Push moduleContext onto the execution context stack; moduleContext is now the running execution context.</del>
+        1. <del>Let result be the result of evaluating module.[[ECMAScriptCode]].</del>
+        1. <del>Suspend moduleContext and remove it from the execution context stack.</del>
+        1. <del>Resume the context that is now on the top of the execution context stack as the running execution context.</del>
+        1. <del>Return Completion(result). </del>
         1. <ins>If _module_.[[Async]] is *false*, then</ins>
           1. <ins>Assert: _capability_ was not provided.</ins>
-          1. Push _moduleCxt_ on to the execution context stack; _moduleCxt_ is now the running execution context.
-          1. Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].
-          1. Suspend _moduleCxt_ and remove it from the execution context stack.
-          1. Resume the context that is now on the top of the execution context stack as the running execution context.
-          1. Return Completion(_result_).
+          1. <ins>Push _moduleCxt_ on to the execution context stack; _moduleCxt_ is now the running execution context.</ins>
+          1. <ins>Let _result_ be the result of evaluating _module_.[[ECMAScriptCode]].</ins>
+          1. <ins>Suspend _moduleCxt_ and remove it from the execution context stack.</ins>
+          1. <ins>Resume the context that is now on the top of the execution context stack as the running execution context.</inns>
+          1. <ins>Return Completion(_result_).</ins>
         1. <ins>Otherwise,</ins>
           1. <ins>Assert: _capability_ is a PromiseCapability Record.</ins>
           1. <ins>Perform ! AsyncBlockStart(_capability_, _module_.[[ECMAScriptCode]], _moduleCxt_).</ins>
@@ -709,7 +745,8 @@ contributors: Myles Borins, Guy Bedford, Daniel Ehrenberg
   </emu-clause>
 
   <emu-clause id="sec-example-source-text-module-record-graphs">
-    <h1>Example Source Text Module Record Graphs</h1>
+    <h1><del> Example Cyclic Module Record Graphs</del><ins>Example Source Text Module Record
+        Graphs</ins></h1>
 
     <p>This non-normative section gives a series of examples of the linking and evaluation of a few common module graphs, with a specific focus on how errors can occur.</p>
 
